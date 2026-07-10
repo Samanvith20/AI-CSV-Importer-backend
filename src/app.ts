@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 
-import { errorHandler } from './middlewares/errorHandler';
+import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
 
@@ -20,8 +20,8 @@ app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-import uploadRoutes from './routes/uploadRoutes';
-import jobRoutes from './routes/jobRoutes';
+import uploadRoutes from './routes/uploadRoutes.js';
+import jobRoutes from './routes/jobRoutes.js';
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {

@@ -4,4 +4,3 @@ dist
 uploads/temp/*
 !uploads/temp/.gitkeep
 test-data/
-prompts/

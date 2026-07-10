@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { AppError } from '../middlewares/errorHandler.js';
 
 export class JobController {
   /**
@@ -8,18 +7,32 @@ export class JobController {
    * Checks the progress of the BullMQ worker.
    */
   public static getJobStatus = asyncHandler(async (req: Request, res: Response) => {
-    const { jobId } = req.params;
+    const jobId = req.params.jobId as string;
+    const { importQueue } = await import('../queues/importQueue.js');
 
-    // TODO: Connect to BullMQ / Redis to fetch actual status
+    const job = await importQueue.getJob(jobId);
+    if (!job) {
+      res.status(404).json({ status: 'failed', error: 'Job not found' });
+      return;
+    }
+
+    const state = await job.getState();
+
+    if (state === 'failed') {
+      res.status(200).json({
+        status: 'failed',
+        error: job.failedReason,
+      });
+      return;
+    }
+
+    const progressData: any = job.progress || {};
+
     res.status(200).json({
-      success: true,
-      message: `Status fetched for job ${jobId}`,
-      data: {
-        status: 'pending',
-        progress: 0,
-        processedRows: 0,
-        totalRows: 0,
-      },
+      status: state,
+      progress: progressData.percent || 0,
+      processedRows: progressData.processedRows || 0,
+      totalRows: progressData.totalRows || 'Calculating...',
     });
   });
 
@@ -28,21 +41,15 @@ export class JobController {
    * Fetches the final standardized CRM records from Redis.
    */
   public static getJobResult = asyncHandler(async (req: Request, res: Response) => {
-    const { jobId } = req.params;
+    const jobId = req.params.jobId as string;
+    const { redisConnection } = await import('../config/redis.js');
 
-    // TODO: Fetch final aggregated results from Redis
-    res.status(200).json({
-      success: true,
-      message: `Results fetched for job ${jobId}`,
-      data: {
-        processedRecords: [],
-        skippedRecords: [],
-        importStatistics: {
-          totalRows: 0,
-          successfullyProcessed: 0,
-          failedOrSkipped: 0,
-        },
-      },
-    });
+    const resultString = await redisConnection.get(`job-result:${jobId}`);
+    if (!resultString) {
+      res.status(404).json({ status: 'failed', error: 'Result not found or expired' });
+      return;
+    }
+
+    res.status(200).json(JSON.parse(resultString));
   });
 }

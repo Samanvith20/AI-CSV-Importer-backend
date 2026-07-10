@@ -8,7 +8,8 @@ dotenv.config();
 const envSchema = z.object({
   PORT: z.string().default('3000'),
   UPSTASH_URL: z.string().min(1, 'UPSTASH_URL is required'),
-  GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY is required'),
+  OPENROUTER_API_KEY: z.string().min(1, 'OPENROUTER_API_KEY is required'),
+  OPENROUTER_MODEL: z.string().min(1, 'OPENROUTER_MODEL is required'),
 });
 
 // 3. Validate process.env against our schema

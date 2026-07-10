@@ -9,8 +9,4 @@ export class QueueService {
     const job = await importQueue.add('process-csv', { importId });
     return job;
   }
-
-  public static async getJobStatus(jobId: string) {
-    throw new Error('Not implemented: QueueService.getJobStatus');
-  }
 }
