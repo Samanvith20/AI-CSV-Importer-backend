@@ -3,3 +3,4 @@ dist
 .env
 uploads/temp/*
 !uploads/temp/.gitkeep
+test-data/
