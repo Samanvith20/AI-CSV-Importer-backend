@@ -38,7 +38,8 @@ export class UploadController {
    * Tells the backend to take the uploaded CSV and start the BullMQ worker.
    */
   public static startProcessing = asyncHandler(async (req: Request, res: Response) => {
-    const { importId } = req.body;
+    const { importId, totalRows } = req.body;
+    console.log('totalRows', totalRows);
 
     if (!importId) {
       throw new AppError(400, 'MISSING_IMPORT_ID', 'importId is required in the request body.');
@@ -49,7 +50,7 @@ export class UploadController {
       throw new AppError(404, 'FILE_NOT_FOUND', 'The uploaded file could not be found.');
     }
 
-    const job = await QueueService.enqueueImportJob(importId);
+    const job = await QueueService.enqueueImportJob(importId, totalRows || 0);
 
     res.status(202).json({
       success: true,

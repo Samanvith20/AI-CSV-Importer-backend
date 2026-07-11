@@ -18,16 +18,22 @@ const worker = new Worker(
     console.log(`Processing importId: ${importId}`);
 
     const filePath = path.join(process.cwd(), 'uploads', 'temp', `${importId}.csv`);
+
+    // Explicitly count total rows to guarantee precise progress tracking
+    const totalRows = job.data.totalRows || (await CsvReaderService.countRows(filePath));
+    console.log(`Total Rows for importId ${importId}: ${totalRows}`);
     const batchSize = 25;
 
     let totalImportProcessed = 0;
     let totalImportSkipped = 0;
     let totalImportDuplicates = 0;
 
+    let processedRows = 0;
+
     const finalRecords: any[] = [];
     const finalSkipped: any[] = [];
 
-    const { totalRows, totalBatches } = await CsvReaderService.processInBatches(
+    const { totalBatches } = await CsvReaderService.processInBatches(
       filePath,
       batchSize,
       async (batch, batchIndex) => {
@@ -36,8 +42,23 @@ const worker = new Worker(
         console.log(`Rows: ${batch.length}`);
 
         try {
-          const aiResponse = await AiService.mapToCrmSchema(batch);
-          const parsed = ResponseParserService.parse(aiResponse);
+          let parsed: any;
+
+          // Retry mechanism for AI mapping and JSON parsing (handles network errors & hallucinations)
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              const aiResponse = await AiService.mapToCrmSchema(batch);
+              parsed = ResponseParserService.parse(aiResponse);
+              break; // Success, break out of retry loop
+            } catch (err) {
+              if (attempt === 3) throw err;
+              console.warn(
+                `Batch ${batchIndex} failed (attempt ${attempt}/3): ${(err as Error).message}. Retrying in ${2000 * attempt}ms...`,
+              );
+              await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+            }
+          }
+
           const validated = ResponseValidatorService.validate(parsed);
           const normalized = NormalizerService.normalize(validated);
           const deduped = DuplicateDetectorService.detect(normalized);
@@ -50,12 +71,19 @@ const worker = new Worker(
           finalRecords.push(...result.records);
           finalSkipped.push(...result.skipped);
 
+          processedRows += batch.length;
+          const percent = totalRows ? Math.round((processedRows / totalRows) * 100) : 0;
+
           await job.updateProgress({
-            percent: 50, // rough estimate since total rows isn't known until stream ends
-            processedRows: totalImportProcessed + totalImportSkipped,
+            percent,
+            processedRows,
+            totalRows,
           });
 
-          console.log('Batch Pipeline Result:', JSON.stringify(result, null, 2));
+          console.log('Batch Statistics:');
+          console.log(`  Processed: ${result.statistics.processed}`);
+          console.log(`  Skipped: ${result.statistics.skipped}`);
+          console.log(`  Duplicates: ${result.statistics.duplicates}`);
         } catch (error) {
           console.error(`Error processing batch ${batchIndex}:`, (error as Error).message);
           throw error; // Let BullMQ catch this and fail the job

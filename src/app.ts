@@ -11,7 +11,11 @@ const app = express();
 app.use(helmet());
 
 // Cross-Origin Resource Sharing
-app.use(cors());
+app.use(
+  cors({
+    origin: '*', // Allow all origins (adjust as needed for production)
+  }),
+);
 
 // Response Compression
 app.use(compression());

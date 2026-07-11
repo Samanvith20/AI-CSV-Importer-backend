@@ -3,6 +3,19 @@ import csvParser from 'csv-parser';
 
 export class CsvReaderService {
   /**
+   * Fast pass to count total rows in the CSV file
+   */
+  public static async countRows(filePath: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      let count = 0;
+      fs.createReadStream(filePath)
+        .pipe(csvParser())
+        .on('data', () => count++)
+        .on('end', () => resolve(count))
+        .on('error', reject);
+    });
+  }
+  /**
    * Reads a CSV file using streams, batches rows, and calls the provided callback for each batch.
    * This is memory efficient and avoids loading the entire file at once.
    */

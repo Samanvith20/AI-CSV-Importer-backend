@@ -26,7 +26,7 @@ const storage = multer.diskStorage({
 export const uploadMiddleware = multer({
   storage,
   limits: {
-    fileSize: 500 * 1024 * 1024, // 500MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (_req, file, cb) => {
     if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {

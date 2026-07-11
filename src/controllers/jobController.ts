@@ -26,13 +26,32 @@ export class JobController {
       return;
     }
 
-    const progressData: any = job.progress || {};
+    let mappedState: string = state;
+    if (state === 'waiting' || state === 'waiting-children' || state === 'delayed') {
+      mappedState = 'queued';
+    } else if (state === 'active') {
+      mappedState = 'processing';
+    }
+
+    let progressObj: { percent?: number; processedRows?: number; totalRows?: number } = {};
+    if (typeof job.progress === 'object' && job.progress !== null) {
+      progressObj = job.progress as {
+        percent?: number;
+        processedRows?: number;
+        totalRows?: number;
+      };
+    } else if (typeof job.progress === 'number') {
+      progressObj = { percent: job.progress };
+    }
+
+    const initialTotalRows = job.data?.totalRows || 0;
 
     res.status(200).json({
-      status: state,
-      progress: progressData.percent || 0,
-      processedRows: progressData.processedRows || 0,
-      totalRows: progressData.totalRows || 'Calculating...',
+      status: mappedState,
+      progress: typeof progressObj.percent === 'number' ? progressObj.percent : 0,
+      processedRows: typeof progressObj.processedRows === 'number' ? progressObj.processedRows : 0,
+      totalRows:
+        typeof progressObj.totalRows === 'number' ? progressObj.totalRows : initialTotalRows,
     });
   });
 

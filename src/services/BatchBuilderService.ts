@@ -3,7 +3,7 @@
  * (e.g., 25 rows per batch) before sending them to the AI Service.
  */
 export class BatchBuilderService {
-  public static createBatches(rows: any[], batchSize: number = 25) {
+  public static createBatches(rows: any[], _batchSize: number = 25) {
     throw new Error('Not implemented: BatchBuilderService.createBatches');
   }
 }

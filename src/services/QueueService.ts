@@ -5,8 +5,8 @@ import { importQueue } from '../queues/importQueue.js';
  * Enqueues new processing jobs and fetches job statuses.
  */
 export class QueueService {
-  public static async enqueueImportJob(importId: string) {
-    const job = await importQueue.add('process-csv', { importId });
+  public static async enqueueImportJob(importId: string, totalRows: number) {
+    const job = await importQueue.add('process-csv', { importId, totalRows });
     return job;
   }
 }
