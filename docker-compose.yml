@@ -1,51 +1,57 @@
-version: '3.8'
-
 services:
-  # Redis for BullMQ
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes # Ensure persistent data recovery
+    command: redis-server --appendonly yes
 
-  # API Server
   api:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
+
     restart: unless-stopped
+
     ports:
       - "5000:5000"
+
+    env_file:
+      - ./.env
+
     environment:
-      - NODE_ENV=production
-      - PORT=5000
-      - UPSTASH_URL=redis://redis:6379
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      NODE_ENV: production
+      PORT: 5000
+      UPSTASH_URL: redis://redis:6379
+
     depends_on:
       - redis
+
     command: ["node", "dist/server.js"]
+
     volumes:
-      # Shared volume so the API can save the CSV and the Worker can read it
       - shared_uploads:/app/uploads
 
-  # Background Worker
   worker:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
+
     restart: unless-stopped
+
+    env_file:
+      - ./.env
+
     environment:
-      - NODE_ENV=production
-      - UPSTASH_URL=redis://redis:6379
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      NODE_ENV: production
+      UPSTASH_URL: redis://redis:6379
+
     depends_on:
       - redis
+
     command: ["node", "dist/jobs/worker.js"]
+
     volumes:
-      # Shared volume
       - shared_uploads:/app/uploads
 
 volumes:
